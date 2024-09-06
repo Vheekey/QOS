@@ -9,9 +9,11 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 from joblib import dump
 
+
 # Function to install a package
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
 
 # Check and install required libraries
 try:
@@ -42,6 +44,7 @@ except ImportError:
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.metrics import mean_squared_error
 
+
 def load_data(network_file, feedback_file):
     try:
         network_data = pd.read_csv(network_file)
@@ -54,11 +57,19 @@ def load_data(network_file, feedback_file):
         sys.exit(1)
     return network_data, user_feedback
 
+
 def preprocess_data(network_data, user_feedback):
-    # Example of feature engineering: creating a new feature 'latency_ratio'
-    network_data['latency_ratio'] = network_data['latency'] / network_data['throughput']
+    # Estimate throughput using bandwidth and packet loss
+    network_data['estimated_throughput'] = network_data['bandwidth'] * (1 - network_data['packet_loss'])
+
+    # Creating feature 'latency_ratio' using estimated throughput
+    network_data['latency_ratio'] = network_data['latency'] / network_data['estimated_throughput']
+
+    # Creating feature 'jitter_per_latency'
     network_data['jitter_per_latency'] = network_data['jitter'] / network_data['latency']
+
     return network_data, user_feedback
+
 
 def train_model(X_train, y_train):
     param_grid = {
@@ -76,12 +87,14 @@ def train_model(X_train, y_train):
     best_model = grid_search.best_estimator_
     return best_model
 
+
 def evaluate_model(model, X_test, y_test):
     predictions = model.predict(X_test)
     mse = mean_squared_error(y_test, predictions)
     rmse = np.sqrt(mse)
     print("Root Mean Squared Error (RMSE):", rmse)
     return predictions
+
 
 def visualize_results(y_test, predictions):
     plt.figure(figsize=(10, 5))
@@ -94,6 +107,7 @@ def visualize_results(y_test, predictions):
     plt.savefig('qoe_comparison.png')
     plt.show()
 
+
 def display_image(image_path):
     if sys.platform == "win32":
         os.startfile(image_path)
@@ -102,6 +116,7 @@ def display_image(image_path):
     else:
         os.system(f"xdg-open {image_path}")
 
+
 def save_model(model, model_file):
     try:
         dump(model, model_file)
@@ -109,31 +124,34 @@ def save_model(model, model_file):
     except Exception as e:
         print(f"Error saving model: {e}")
 
+
 def main(network_file, feedback_file, model_file='trained_model.joblib'):
     network_data, user_feedback = load_data(network_file, feedback_file)
     network_data, user_feedback = preprocess_data(network_data, user_feedback)
 
-    X = network_data[['throughput', 'latency', 'packet_loss', 'jitter', 'latency_ratio', 'jitter_per_latency']]
+    X = network_data[
+        ['estimated_throughput', 'latency', 'packet_loss', 'jitter', 'latency_ratio', 'jitter_per_latency']]
     y = user_feedback['qoe']
-    
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    
+
     print("Shape of X_test:", X_test.shape)
     print("Shape of y_test:", y_test.shape)
-    
+
     model = train_model(X_train, y_train)
-    
+
     predictions = evaluate_model(model, X_test, y_test)
-    
+
     print("Shape of predictions:", predictions.shape)
     print("y_test values:", y_test)
     print("Predictions:", predictions)
-    
+
     # Save the trained model
     save_model(model, model_file)
-    
+
     visualize_results(y_test, predictions)
     display_image('qoe_comparison.png')
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

@@ -1,4 +1,4 @@
-throughput,latency,packet_loss,jitter
+bandwidth,latency,packet_loss,jitter
 300,20,0.01,1
 150,30,0.02,2
 200,25,0.03,3
