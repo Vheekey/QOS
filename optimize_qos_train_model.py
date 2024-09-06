@@ -113,7 +113,7 @@ def main(network_file, feedback_file, model_file='trained_model.joblib'):
     network_data, user_feedback = load_data(network_file, feedback_file)
     network_data, user_feedback = preprocess_data(network_data, user_feedback)
 
-    X = network_data[['estimated_throughput', 'latency', 'packet_loss', 'jitter', 'latency_ratio', 'jitter_per_latency']]
+    X = network_data[['throughput', 'latency', 'packet_loss', 'jitter', 'latency_ratio', 'jitter_per_latency']]
     y = user_feedback['qoe']
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
